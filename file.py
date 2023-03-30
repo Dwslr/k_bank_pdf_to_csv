@@ -35,7 +35,7 @@ with open(os.path.expanduser('~/Desktop/docs/kaspi_output.csv'), 'w', newline=''
             # Parse the date string and convert it to a datetime object
             date = datetime.strptime(date_str, '%d.%m.%y')
             # Format the date as desired
-            date = date.strftime('%d-%m-%y')
+            date = date.strftime('%d-%m-%Y')
 
             # Use a regular expression to extract the amount
             match = re.search(r'([+-].+₸)', line)
