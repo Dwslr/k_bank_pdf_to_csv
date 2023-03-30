@@ -2,6 +2,7 @@ import PyPDF2
 import re
 import os
 import csv
+from datetime import datetime
 
 pdf_file = open(os.path.expanduser('~/Desktop/docs/kaspi_statement_23.03.30.pdf'), 'rb')
 reader = PyPDF2.PdfReader(pdf_file)
@@ -28,8 +29,13 @@ with open(os.path.expanduser('~/Desktop/docs/kaspi_output.csv'), 'w', newline=''
 
     for line in lines:
         if line.strip() and ' ' in line:
+
            # Extract the date using the split() method
-            date = line.split()[0]
+            date_str = line.split()[0]
+            # Parse the date string and convert it to a datetime object
+            date = datetime.strptime(date_str, '%d.%m.%y')
+            # Format the date as desired
+            date = date.strftime('%d-%m-%y')
 
             # Use a regular expression to extract the amount
             match = re.search(r'([+-].+₸)', line)
