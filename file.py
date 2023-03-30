@@ -24,4 +24,16 @@ with open(os.path.expanduser('~/Desktop/docs/kaspi_output.csv'), 'w', newline=''
     writer = csv.writer(csvfile)
 
     for line in lines:
-        writer.writerow([line])
+        if line.strip() and ' ' in line:
+           # Extract the date using the split() method
+            date = line.split()[0] 
+            # Use a regular expression to extract the amount
+            match = re.search(r'([+-].+₸)', line)
+            amount = match.group(1) if match else ''
+            # Use a regular expression to extract the operation
+            match = re.search(r'\S+\s+\S+\s{2,}(\S+)', line)
+            operation = match.group(1) if match else ''
+            # Write the data to the CSV file
+            writer.writerow([line, date, amount, operation])
+        else:
+            writer.writerow([line])
