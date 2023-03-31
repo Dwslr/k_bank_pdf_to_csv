@@ -28,7 +28,8 @@ df_kaspi = df_kaspi.drop(df_kaspi.index[0])
 
 # Create a connection to the SQLite database
 con = sqlite3.connect(os.path.expanduser('~/Desktop/docs/database_kc.db'))
-# Create cursor object to execute SQL commands
+
+# Create cursor object to execute SQL commands ???
 # cursor = con.cursor()
 
 # Convert the dataframes into SQLite tables using the to_sql method
@@ -41,13 +42,14 @@ def select(sql):
   return print(pd.read_sql(sql, con))
 
 sql = '''
-SELECT *
-FROM curr'''
+SELECT k.date, IIF(amount < 0, ROUND(amount / rate_rub_kzt, 0), '') AS outcome_rub, IIF(amount > 0, ROUND(amount / rate_rub_kzt, 0), '') AS income_rub
+FROM kaspi AS k
+JOIN curr AS c ON k.date = c.day'''
 
-select(sql)
-
-sql = '''
-SELECT *
-FROM kaspi'''
+# sql ='''
+# SELECT date, MAX(income_rub)
+# FROM (SELECT k.date, IIF(amount < 0, ROUND(amount / rate_rub_kzt, 0), '') AS outcome_rub, IIF(amount > 0, ROUND(amount / rate_rub_kzt, 0), '') AS income_rub
+#       FROM kaspi AS k
+#       JOIN curr AS c ON k.date = c.day)'''
 
 select(sql)
