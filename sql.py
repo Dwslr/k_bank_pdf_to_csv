@@ -21,21 +21,33 @@ df_kaspi = df_kaspi.iloc[:, 1:]
 df_kaspi = df_kaspi.drop(df_kaspi.index[0])
 
 # Check
-print(df_kaspi.head())
-print(df_curr.head())
-print(df_kaspi.dtypes)
-print(df_curr.dtypes)
+# print(df_kaspi.head())
+# print(df_curr.head())
+# print(df_kaspi.dtypes)
+# print(df_curr.dtypes)
 
+# Create a connection to the SQLite database
+con = sqlite3.connect(os.path.expanduser('~/Desktop/docs/database_kc.db'))
+# Create cursor object to execute SQL commands
+# cursor = con.cursor()
 
+# Convert the dataframes into SQLite tables using the to_sql method
+df_kaspi.to_sql('kaspi',con,index=False,if_exists='replace')
+df_curr.to_sql('curr',con,index=False,if_exists='replace')
 
+# Create function 'select' with parameter 'sql'
+def select(sql):
+  """print the query result"""
+  return print(pd.read_sql(sql, con))
 
+sql = '''
+SELECT *
+FROM curr'''
 
+select(sql)
 
-# # Connect data to the SQLite database
-# con = sqlite3.connect(os.path.expanduser('~/Desktop/docs/kaspi_dm.db'))
-# df_kaspi.to_sql('kaspi_dm',con1,index=False,if_exists='replace')
+sql = '''
+SELECT *
+FROM kaspi'''
 
-# # Create function 'select' with parameter 'sql'
-# def select(sql, con):
-#   """print the query result"""
-#   return print(pd.read_sql(sql, con))
+select(sql)
