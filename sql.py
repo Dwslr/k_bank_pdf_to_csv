@@ -19,7 +19,7 @@ cols_to_drop = [col for col in df_ffin.columns if col.startswith('amount_curr')]
 df_ffin = df_ffin.drop(cols_to_drop, axis=1)
 
 # Convert column in desired date format 
-#df_ffin[['date']] = df_ffin[['date']].apply(lambda x: pd.to_datetime(x, format='%Y.%m.%d %H:%M:%S').dt.strftime('%Y-%m-%d'))
+df_ffin[['date']] = df_ffin[['date']].apply(lambda x: pd.to_datetime(x, format='%Y.%m.%d %H:%M:%S').dt.strftime('%Y-%m-%d'))
 
 # Correct date format in df
 df_kaspi['date'] = pd.to_datetime(df_kaspi['date'],format='%d-%m-%Y')
@@ -61,11 +61,58 @@ def select(sql):
   return print(pd.read_sql(sql, con))
 
 
+# sql = '''
+# SELECT date, amount, note
+# FROM kaspi AS k
+# WHERE date < "2023-03-01" AND date > "2023-02-20"
+# union all
+# SELECT date, amount, description
+# FROM ffin AS f
+# WHERE date < "2023-03-01" AND date > "2023-02-20"
+# '''
+
+# Select transit operations from ffin bank to kaspi bank
+sql = '''
+SELECT f.date, f.amount, f.description, k.amount
+FROM ffin AS f
+LEFT JOIN kaspi AS k USING (date)
+WHERE f.amount < 0 AND f.description LIKE "%P2P%" AND k.operation = "Пополнение"
+'''
+
+# Exclude transit operations from ffin bank to kaspi bank
 sql = '''
 SELECT *
 FROM ffin
-LIMIT 30
+WHERE amount NOT IN (SELECT amount
+                        FROM (SELECT f.date, f.amount, f.description, k.amount
+                        FROM ffin AS f
+                        LEFT JOIN kaspi AS k USING (date)
+                        WHERE f.amount < 0 AND f.description LIKE "%P2P%" AND k.operation = "Пополнение")
+                        )
 '''
 
+# Union the two tables into one general statement
+sql = '''
+CREATE TABLE general AS
+SELECT date, amount, note
+FROM kaspi
+UNION ALL
+SELECT date, amount, description
+FROM (SELECT *
+      FROM ffin
+      WHERE amount NOT IN (SELECT amount
+                          FROM (SELECT f.date, f.amount, f.description, k.amount
+                          FROM ffin AS f
+                          LEFT JOIN kaspi AS k USING (date)
+                          WHERE f.amount < 0 AND f.description LIKE "%P2P%" AND k.operation = "Пополнение")
+                          )
+        );
+'''
+
+sql = '''
+SELECT *
+FROM general
+WHERE date < '2022-11-23' AND date > '2022-11-21'
+'''
 
 select(sql)
