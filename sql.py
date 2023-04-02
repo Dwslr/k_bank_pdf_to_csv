@@ -61,13 +61,8 @@ def select(sql):
 
 # Select the operations that were declined. The number of these operations is even
 sql = '''
-SELECT COUNT(date), ABS(amount), date
+SELECT *
 FROM ffin
-GROUP BY 2
-HAVING COUNT(date) > 1 AND COUNT(date) % 2 = 0
-ORDER BY 3 DESC
 '''
-
-
 
 select(sql)
