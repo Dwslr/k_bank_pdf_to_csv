@@ -10,7 +10,7 @@ import os
 # Create DataFrame (df) from csv file
 df_kaspi = pd.read_csv(os.path.expanduser('~/Desktop/docs/kaspi_output.csv'))
 df_curr = pd.read_excel(os.path.expanduser('~/Desktop/docs/cur_rates_last_year.xlsx'))
-df_ffin = pd.read_excel(os.path.expanduser('~/Desktop/docs/ffinkz_statement.xlsx'))
+df_ffin = pd.read_excel(os.path.expanduser('~/Desktop/docs/ffinkz_statement_2.xlsx'))
 
 # print(df_ffin.columns)
 
@@ -32,6 +32,7 @@ df_kaspi = df_kaspi.iloc[:, 1:]
 # Delete the empty row from the DataFrame
 df_kaspi = df_kaspi.drop(df_kaspi.index[0])
 # df_ffin = df_ffin.drop(df_ffin.index[0])
+
 
 
 
@@ -59,10 +60,12 @@ def select(sql):
   """print the query result"""
   return print(pd.read_sql(sql, con))
 
-# Select the operations that were declined. The number of these operations is even
+
 sql = '''
 SELECT *
 FROM ffin
+LIMIT 30
 '''
+
 
 select(sql)
