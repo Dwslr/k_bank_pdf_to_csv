@@ -34,8 +34,6 @@ df_kaspi = df_kaspi.drop(df_kaspi.index[0])
 # df_ffin = df_ffin.drop(df_ffin.index[0])
 
 
-
-
 # Check
 # print(df_kaspi.head())
 # print(df_curr.head())
@@ -61,58 +59,48 @@ def select(sql):
   return print(pd.read_sql(sql, con))
 
 
-# sql = '''
-# SELECT date, amount, note
-# FROM kaspi AS k
-# WHERE date < "2023-03-01" AND date > "2023-02-20"
-# union all
-# SELECT date, amount, description
-# FROM ffin AS f
-# WHERE date < "2023-03-01" AND date > "2023-02-20"
-# '''
-
-# Select transit operations from ffin bank to kaspi bank
+# delete table if it was created early
 sql = '''
-SELECT f.date, f.amount, f.description, k.amount
-FROM ffin AS f
-LEFT JOIN kaspi AS k USING (date)
-WHERE f.amount < 0 AND f.description LIKE "%P2P%" AND k.operation = "Пополнение"
+DROP TABLE IF EXISTS general;
 '''
-
-# Exclude transit operations from ffin bank to kaspi bank
-sql = '''
-SELECT *
-FROM ffin
-WHERE amount NOT IN (SELECT amount
-                        FROM (SELECT f.date, f.amount, f.description, k.amount
-                        FROM ffin AS f
-                        LEFT JOIN kaspi AS k USING (date)
-                        WHERE f.amount < 0 AND f.description LIKE "%P2P%" AND k.operation = "Пополнение")
-                        )
-'''
+con.execute(sql)
 
 # Union the two tables into one general statement
 sql = '''
 CREATE TABLE general AS
 SELECT date, amount, note
 FROM kaspi
+WHERE amount NOT IN (SELECT k.amount
+                    FROM kaspi AS k
+                    LEFT JOIN ffin AS f ON k.date = f.date
+                    WHERE k.amount < 0 
+                    AND k.note LIKE '%1402%' 
+                    AND f.description LIKE '%p2p%' 
+                    AND f.amount > 0 
+                    AND ABS(k.amount) > f.amount * 0.9 
+                    AND ABS(k.amount) < f.amount * 1.1
+                    )
 UNION ALL
 SELECT date, amount, description
-FROM (SELECT *
-      FROM ffin
-      WHERE amount NOT IN (SELECT amount
-                          FROM (SELECT f.date, f.amount, f.description, k.amount
-                          FROM ffin AS f
-                          LEFT JOIN kaspi AS k USING (date)
-                          WHERE f.amount < 0 AND f.description LIKE "%P2P%" AND k.operation = "Пополнение")
-                          )
-        );
+FROM ffin
+WHERE amount NOT IN (SELECT f.amount
+                    FROM ffin AS f
+                    LEFT JOIN kaspi AS k ON f.date = k.date
+                    WHERE f.amount < 0 
+                    AND f.description LIKE "%P2P%" 
+                    AND k.operation = "Пополнение"
+                    )
 '''
 
+con.execute(sql)
+
 sql = '''
-SELECT *
-FROM general
-WHERE date < '2022-11-23' AND date > '2022-11-21'
+SELECT STRFTIME('%Y-%m', g.date) AS month, SUM(ROUND(g.amount / c.rate_rub_kzt, 0)) AS sum_amount_r
+FROM general AS g
+JOIN curr AS c ON g.date = c.day
+WHERE amount < 0
+GROUP BY 1
+ORDER BY 1 DESC
 '''
 
 select(sql)
