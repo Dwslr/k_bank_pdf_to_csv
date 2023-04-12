@@ -4,7 +4,7 @@ import os
 import csv
 from datetime import datetime
 
-pdf_file = open(os.path.expanduser('~/Desktop/docs/kaspi-statement-31-03-23.pdf'), 'rb')
+pdf_file = open(os.path.expanduser('~/Desktop/docs/kaspi_statement_12-04-23.pdf'), 'rb')
 reader = PyPDF2.PdfReader(pdf_file)
 
 data = ''

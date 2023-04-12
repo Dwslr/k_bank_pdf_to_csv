@@ -9,7 +9,7 @@ import os
 
 # Create DataFrame (df) from csv file
 df_kaspi = pd.read_csv(os.path.expanduser('~/Desktop/docs/kaspi_output.csv'))
-df_curr = pd.read_excel(os.path.expanduser('~/Desktop/docs/cur_rates_last_year.xlsx'))
+df_curr = pd.read_excel(os.path.expanduser('~/Desktop/docs/currs_12_04_23.xlsx'))
 df_ffin = pd.read_excel(os.path.expanduser('~/Desktop/docs/ffinkz_statement_2.xlsx'))
 
 # print(df_ffin.columns)
@@ -68,11 +68,12 @@ con.execute(sql)
 # Union the two tables into one general statement
 sql = '''
 CREATE TABLE general AS
-SELECT date, amount, note
-FROM kaspi
+SELECT date, amount, note, ROUND(amount / c.rate_rub_kzt, 0) AS amount_r
+FROM kaspi AS k
+  JOIN curr AS c ON k.date = c.day
 WHERE amount NOT IN (SELECT k.amount
                     FROM kaspi AS k
-                    LEFT JOIN ffin AS f ON k.date = f.date
+                      LEFT JOIN ffin AS f ON k.date = f.date
                     WHERE k.amount < 0 
                     AND k.note LIKE '%1402%' 
                     AND f.description LIKE '%p2p%' 
@@ -81,11 +82,12 @@ WHERE amount NOT IN (SELECT k.amount
                     AND ABS(k.amount) < f.amount * 1.1
                     )
 UNION ALL
-SELECT date, amount, description
-FROM ffin
+SELECT date, amount, description, ROUND(amount / c.rate_rub_kzt, 0) AS amount_r
+FROM ffin AS f
+  JOIN curr AS c ON f.date = c.day
 WHERE amount NOT IN (SELECT f.amount
                     FROM ffin AS f
-                    LEFT JOIN kaspi AS k ON f.date = k.date
+                      LEFT JOIN kaspi AS k ON f.date = k.date
                     WHERE f.amount < 0 
                     AND f.description LIKE "%P2P%" 
                     AND k.operation = "Пополнение"
@@ -94,13 +96,108 @@ WHERE amount NOT IN (SELECT f.amount
 
 con.execute(sql)
 
+# sql = '''
+# SELECT *
+# FROM general
+# '''
+# select(sql)
+
+# select sum and max expenses grouping by month
 sql = '''
-SELECT STRFTIME('%Y-%m', g.date) AS month, SUM(ROUND(g.amount / c.rate_rub_kzt, 0)) AS sum_amount_r
+SELECT STRFTIME('%Y-%m', g.date) AS month, 
+        SUM(amount_r) AS sum_expense_r,
+        MIN(amount_r) AS max_expense_r,
+        g.note
 FROM general AS g
-JOIN curr AS c ON g.date = c.day
 WHERE amount < 0
 GROUP BY 1
 ORDER BY 1 DESC
 '''
+#select(sql)
 
+# 
+sql = '''
+SELECT STRFTIME('%Y-%m', g.date) AS month,
+        amount_r AS big_expense_r,
+        g.note
+FROM general AS g
+WHERE amount_r < (SELECT AVG(amount_r) AS avg_expense_r
+                  FROM general AS g
+                  WHERE amount_r < 0
+                  ) * 5
+
+ORDER BY 1 DESC, 2 
+'''
+#select(sql)
+
+sql = '''
+SELECT SUM(amount_r)
+FROM general
+WHERE amount_r > 0
+'''
+
+sql = '''
+SELECT SUM(amount_r)
+FROM general
+WHERE amount_r < 0
+'''
+
+print('--------------------------------------------------------------------------------------------------------')
+print('------------------------------------- FFIN')
+sql = '''
+SELECT STRFTIME('%Y-%m-%d', date) AS date_s, amount, description
+FROM ffin
+WHERE description LIKE '%p2p%'
+'''
+#select(sql)
+
+print('--------------------------------------------------------------------------------------------------------')
+print('------------------------------------- KASPI')
+sql = '''
+SELECT STRFTIME('%Y-%m-%d', date) AS date_s, amount, operation, note
+FROM kaspi
+WHERE operation LIKE 'Пополнение'
+'''
+#select(sql)
+
+print('--------------------------------------------------------------------------------------------------------')
+print('------------------------------------- GENERAL')
+sql = '''
+SELECT SUM(amount) / 6
+FROM general
+WHERE amount < 0
+'''
+#select(sql)
+
+sql = '''
+SELECT SUM(amount) / 6
+FROM general
+WHERE amount > 0
+'''
+#select(sql)
+
+sql = '''
+SELECT STRFTIME('%Y-%m-%d', date) AS date_s, amount, note, ABS(amount)
+FROM general
+WHERE note LIKE '%p2p%' OR note LIKE '%карт%' OR note LIKE '%номеру счета%'
+ORDER BY 1 DESC, 4 DESC
+'''
+sql = '''
+SELECT *
+FROM (SELECT STRFTIME('%Y-%m-%d', date) AS date_s, amount, note, ABS(amount)
+      FROM general
+      WHERE note LIKE '%p2p%' OR note LIKE '%карт%' OR note LIKE '%номеру счета%'
+      ORDER BY 1 DESC, 4 DESC
+      )
+WHERE date_s > '2023-02-01' AND date_s < '2023-02-31'
+'''
+#select(sql)
+
+sql = '''
+SELECT STRFTIME('%Y-%m', date) AS month, SUM(ABS(amount_r)) AS sum_expence_r
+FROM general AS g
+WHERE amount < 0
+GROUP BY 1
+ORDER BY 1 DESC
+'''
 select(sql)
